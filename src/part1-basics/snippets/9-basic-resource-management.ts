@@ -37,7 +37,7 @@ Effect.runSync(one);
  * For resources that only have a 'release' phase, we can use `addFinalizer`
  */
 
-const two: Effect.Effect<void, never, Scope.Scope> = Effect.gen(function* () {
+const two = Effect.gen(function* () {
   yield* Effect.addFinalizer(() => Console.log("Last!"));
   yield* Console.log("First");
 });
@@ -62,26 +62,31 @@ Effect.runSync(three);
 const four = Effect.gen(function* () {
   yield* pipe(
     Effect.addFinalizer(() => Console.log("Last!")),
-    Effect.scoped
+    Effect.scoped,
   );
   yield* Console.log("First");
 });
 
-Effect.runSync(four);
+// Effect.runSync(four);
 
 /**
  * For resources that have an 'acquire' and 'release' phase, we can use `acquireRelease`
  */
 import fs from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const acquire = Effect.tryPromise({
-  try: () => fs.open("1-what-is-a-program.js", "r"),
+  try: () => fs.open(join(__dirname, "1-what-is-a-program.js"), "r"),
   catch: (e) => new Error("Failed to open file"),
 }).pipe(Effect.zipLeft(Console.log("File opened")));
 
 const release = (file: fs.FileHandle) =>
   Effect.promise(() => file.close()).pipe(
-    Effect.zipLeft(Console.log("File closed"))
+    Effect.zipLeft(Console.log("File closed")),
   );
 
 const file = Effect.acquireRelease(acquire, release);
@@ -95,7 +100,7 @@ const useFile = (file: fs.FileHandle) => Console.log(`Using File: ${file.fd}`);
 
 const program = file.pipe(
   Effect.flatMap((file) => useFile(file)),
-  Effect.scoped
+  Effect.scoped,
 );
 
 await Effect.runPromise(program);
@@ -119,7 +124,7 @@ const program3 = Effect.gen(function* () {
   yield* Console.log("Using file");
   yield* pipe(
     Effect.tryPromise(() => handle.readFile()),
-    Effect.andThen((buf) => Console.log(buf.toString()))
+    Effect.andThen((buf) => Console.log(buf.toString())),
   );
 }).pipe(Effect.scoped); // scope closed after all usages are finished- ok!
 
@@ -131,8 +136,8 @@ const program4 = Effect.gen(function* () {
   yield* Console.log("Using file");
   yield* pipe(
     Effect.tryPromise(() => handle.readFile()),
-    Effect.andThen((buf) => Console.log(buf.toString()))
+    Effect.andThen((buf) => Console.log(buf.toString())),
   );
 });
 
-// await Effect.runPromise(program4);
+await Effect.runPromise(program4);
