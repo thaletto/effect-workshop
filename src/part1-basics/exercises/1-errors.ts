@@ -9,10 +9,15 @@ import * as T from "../../testDriver.ts";
 
 let i = 0;
 const eventuallySucceeds = Effect.suspend(() =>
-  i++ < 100 ? Effect.fail("error") : Effect.succeed(5)
+  i++ < 100 ? Effect.fail("error") : Effect.succeed(5),
 );
 
-const testOne = eventuallySucceeds;
+const testOne: Effect.Effect<number> = Effect.suspend(() =>
+  Effect.matchEffect(eventuallySucceeds, {
+    onSuccess: (_) => Effect.succeed(_),
+    onFailure: () => testOne,
+  }),
+);
 
 await T.testRunAssert(1, testOne, { success: 5 });
 
