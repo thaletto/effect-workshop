@@ -27,19 +27,15 @@ await T.testRunAssert(1, test1, { success: "imFromContext!" });
 /**
  * # Exercise 2
  */
- 
-class Random extends Context.Tag("Random")<
-  Random,
-  {
-    readonly nextInt: Effect.Effect<number>;
-    readonly nextBool: Effect.Effect<boolean>;
-    readonly nextIntBetween: (
-      min: number,
-      max: number,
-    ) => Effect.Effect<number>;
-  }
->() {
-  static readonly Mock = Layer.succeed(Random, {
+
+interface RandomImpl {
+  readonly nextInt: Effect.Effect<number>;
+  readonly nextBool: Effect.Effect<boolean>;
+  readonly nextIntBetween: (min: number, max: number) => Effect.Effect<number>;
+}
+
+class Random extends Context.Tag("Random")<Random, RandomImpl>() {
+  static readonly Live = Layer.succeed(Random, {
     nextInt: Effect.succeed(42),
     nextBool: Effect.succeed(true),
     nextIntBetween: (min, max) => Effect.succeed(min + max),
@@ -51,19 +47,17 @@ class Random extends Context.Tag("Random")<
  * For convenience lets create Effects (or functions that return Effects) themselves already depend on the service
  */
 
-declare const nextInt: Effect.Effect<number, never, Random>;
-declare const nextBool: Effect.Effect<boolean, never, Random>;
-declare const nextIntBetween: (
-  min: number,
-  max: number,
-) => Effect.Effect<number, never, Random>;
-
 const test2 = Effect.gen(function* () {
+  const {
+    constants: { nextInt, nextBool },
+    functions: { nextIntBetween },
+  } = Effect.serviceMembers(Random);
+  
   const int = yield* nextInt;
   const bool = yield* nextBool;
   const intBetween = yield* nextIntBetween(10, 20);
   return { int, bool, intBetween };
-}).pipe(Effect.provide(Random.Mock));
+}).pipe(Effect.provide(Random.Live));
 
 await T.testRunAssert(2, test2, {
   success: { int: 42, bool: true, intBetween: 30 },
