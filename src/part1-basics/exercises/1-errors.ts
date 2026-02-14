@@ -43,11 +43,16 @@ await T.testRunAssert(2, testTwo, {
  * Now `succeed` with both an array of success values and an array of errors
  */
 
-const testThree = Effect.all(maybeFailArr);
+const testThree = Effect.all(maybeFailArr, { mode: "either" }).pipe(
+  Effect.andThen((result) => ({
+    success: result.filter(Either.isRight).map((_) => _.right),
+    failure: result.filter(Either.isLeft).map((_) => _.left),
+  })),
+);
 
-// await T.testRunAssert(3, testThree, {
-//   success: {
-//     success: [2, 4, 6, 8, 10],
-//     failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
-//   },
-// });
+await T.testRunAssert(3, testThree, {
+  success: {
+    success: [2, 4, 6, 8, 10],
+    failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
+  },
+});
