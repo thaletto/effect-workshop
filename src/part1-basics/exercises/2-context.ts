@@ -2,11 +2,13 @@ import { Context, Effect, Layer } from "effect";
 import * as T from "../../testDriver.ts";
 
 interface FooImpl {
-  readonly bar: string;
+  readonly bar: Effect.Effect<string>;
 }
 
 class Foo extends Context.Tag("Foo")<Foo, FooImpl>() {
-  static readonly Live = Layer.succeed(Foo, { bar: "imFromContext!" });
+  static readonly Live = Layer.succeed(Foo, {
+    bar: Effect.succeed("imFromContext!"),
+  });
 }
 
 /**
@@ -17,9 +19,10 @@ class Foo extends Context.Tag("Foo")<Foo, FooImpl>() {
  */
 
 const test1 = Effect.gen(function* () {
-  const context = yield* Effect.context<Foo>();
-  const foo = Context.get(context, Foo);
-  return foo.bar;
+  const {
+    constants: { bar },
+  } = Effect.serviceMembers(Foo);
+  return yield* bar;
 }).pipe(Effect.provide(Foo.Live));
 
 await T.testRunAssert(1, test1, { success: "imFromContext!" });
@@ -52,7 +55,7 @@ const test2 = Effect.gen(function* () {
     constants: { nextInt, nextBool },
     functions: { nextIntBetween },
   } = Effect.serviceMembers(Random);
-  
+
   const int = yield* nextInt;
   const bool = yield* nextBool;
   const intBetween = yield* nextIntBetween(10, 20);
