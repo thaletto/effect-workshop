@@ -19,15 +19,17 @@ class MockFile {
   static readonly open = (fd: number) =>
     pipe(
       T.logTest(`open ${fd}`),
-      Effect.andThen(() => new MockFile(fd))
+      Effect.andThen(() => new MockFile(fd)),
     );
 }
 
-declare const file: (fd: number) => Effect.Effect<number, never, Scope.Scope>;
+function file(fd: number) {
+  return Effect.acquireRelease(MockFile.open(fd), (file) => file.close);
+}
 
 const test1 = Effect.gen(function* () {
-  const file1 = yield* file(1);
-  const file2 = yield* file(2);
+  yield* file(1);
+  yield* file(2);
 }).pipe(Effect.scoped);
 
 await T.testRunAssert(1, test1, {
