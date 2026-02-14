@@ -29,11 +29,13 @@ const maybeFailArr = Array.allocate<number>(10)
   .map((_, index) => index + 1)
   .map((number) => maybeFail(number));
 
-const testTwo = Effect.all(maybeFailArr);
+const testTwo = Effect.all(maybeFailArr, { mode: "validate" }).pipe(
+  Effect.mapError((errors) => errors.filter(Option.isSome).map((_) => _.value)),
+);
 
-// await T.testRunAssert(2, testTwo, {
-//   failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
-// });
+await T.testRunAssert(2, testTwo, {
+  failure: ["odd 1", "odd 3", "odd 5", "odd 7", "odd 9"],
+});
 
 /**
  * # Exercise 3:
