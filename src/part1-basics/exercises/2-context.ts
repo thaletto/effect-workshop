@@ -1,7 +1,11 @@
 import { Context, Effect, Layer } from "effect";
 import * as T from "../../testDriver.ts";
 
-class Foo extends Context.Tag("Foo")<Foo, { readonly bar: string }>() {
+interface FooImpl {
+  readonly bar: string;
+}
+
+class Foo extends Context.Tag("Foo")<Foo, FooImpl>() {
   static readonly Live = Layer.succeed(Foo, { bar: "imFromContext!" });
 }
 
@@ -13,7 +17,8 @@ class Foo extends Context.Tag("Foo")<Foo, { readonly bar: string }>() {
  */
 
 const test1 = Effect.gen(function* () {
-  const foo = { bar: "hint: look at Effect.context" };
+  const context = yield* Effect.context<Foo>();
+  const foo = Context.get(context, Foo);
   return foo.bar;
 }).pipe(Effect.provide(Foo.Live));
 
@@ -22,6 +27,7 @@ await T.testRunAssert(1, test1, { success: "imFromContext!" });
 /**
  * # Exercise 2
  */
+ 
 class Random extends Context.Tag("Random")<
   Random,
   {
@@ -29,7 +35,7 @@ class Random extends Context.Tag("Random")<
     readonly nextBool: Effect.Effect<boolean>;
     readonly nextIntBetween: (
       min: number,
-      max: number
+      max: number,
     ) => Effect.Effect<number>;
   }
 >() {
@@ -49,7 +55,7 @@ declare const nextInt: Effect.Effect<number, never, Random>;
 declare const nextBool: Effect.Effect<boolean, never, Random>;
 declare const nextIntBetween: (
   min: number,
-  max: number
+  max: number,
 ) => Effect.Effect<number, never, Random>;
 
 const test2 = Effect.gen(function* () {
