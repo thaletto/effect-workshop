@@ -1,4 +1,4 @@
-import { Effect, type Scope, pipe } from "effect";
+import { Effect, Exit, Scope, pipe } from "effect";
 import * as T from "../../testDriver.ts";
 
 /**
@@ -44,13 +44,19 @@ await T.testRunAssert(1, test1, {
  */
 
 const test2 = Effect.gen(function* () {
-  const file1 = yield* file(1);
-  const file2 = yield* file(2);
+  const scope1 = yield* Scope.make();
+  const scope2 = yield* Scope.make();
+
+  const file1 = yield* pipe(file(1), Scope.extend(scope1));
+  const file2 = yield* pipe(file(2), Scope.extend(scope2));
+
+  yield* pipe(Scope.close(scope1, Exit.unit));
   yield* T.logTest("hi!");
-}).pipe(Effect.scoped);
+  yield* Scope.close(scope2, Exit.unit);
+});
 
 /* uncomment after you finish exercise 1 */
 
-// await T.testRunAssert(2, test2, {
-// 	logs: ['open 1', 'open 2', 'close 1', 'hi!', 'close 2'],
-// });
+await T.testRunAssert(2, test2, {
+  logs: ["open 1", "open 2", "close 1", "hi!", "close 2"],
+});
